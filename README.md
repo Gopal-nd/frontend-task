@@ -1,7 +1,3 @@
-Below is a **clean, professional, submission-ready `README.md`** you can **copy-paste directly** into your GitHub repository.
-It matches **exactly** what evaluators asked for and reflects all the work you’ve done.
-
----
 
 # 🌤️ Weather App
 
