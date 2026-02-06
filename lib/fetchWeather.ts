@@ -12,6 +12,7 @@ export async function fetchWeather(city: string): Promise<WeatherResponse> {
         appid: process.env.NEXT_PUBLIC_WEATHER_API_KEY,
       },
     })
+    console.log(res.data)
 
     return res.data
   } catch (error: any) {

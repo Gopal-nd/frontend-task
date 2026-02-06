@@ -1,33 +1,69 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import SearchBar from "@/components/SearchBar"
 import WeatherCard from "@/components/WeatherCard"
 import WeatherSkeleton from "@/components/Loader"
 import ErrorMessage from "@/components/ErrorMessage"
 import { fetchWeather } from "@/lib/fetchWeather"
 import { WeatherResponse } from "@/types/weather"
+import { fetchForecast } from "@/lib/fetchForecast"
+import { reverseGeo } from "@/lib/reverseGeo"
+import UnitToggle from "@/components/UnitToggle"
+import Forecast from "@/components/Forecast"
 
 export default function Home() {
   const [city, setCity] = useState("")
   const [weather, setWeather] = useState<WeatherResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [unit, setUnit] = useState<"metric" | "imperial">("metric")
+  const [forecast, setForecast] = useState<any[]>([])
 
 
-  const handleSearch = async () => {
-    if (!city.trim()) {
+
+
+  useEffect(() => {
+    navigator.geolocation?.getCurrentPosition(async (pos) => {
+      const cityName = await reverseGeo(
+        pos.coords.latitude,
+        pos.coords.longitude
+      )
+
+      if (cityName) {
+        setCity(cityName.split(' ')[0])
+        setLoading(true)
+
+        const weatherData = await fetchWeather(cityName)
+        const forecastData = await fetchForecast(cityName)
+
+        setWeather(weatherData)
+        setForecast(forecastData)
+        setLoading(false)
+      }
+    })
+  }, [])
+
+
+
+
+  const handleSearch = async (searchCity?: string) => {
+    const cityToSearch = searchCity ?? city
+
+    if (!cityToSearch.trim()) {
       setError("Enter a city name to see the current weather")
       return
     }
 
-    setLoading(true)
-    setError("")
-    setWeather(null)
-
     try {
-      const data = await fetchWeather(city)
-      setWeather(data)
+      setLoading(true)
+      setError("")
+
+      const weatherData = await fetchWeather(cityToSearch)
+      const forecastData = await fetchForecast(cityToSearch)
+
+      setWeather(weatherData)
+      setForecast(forecastData)
     } catch (err: any) {
       setError(
         err.message === "City not found"
@@ -50,14 +86,18 @@ export default function Home() {
       <h1 className="text-4xl font-bold mb-6 text-slate-900">
         Weather App
       </h1>
+      <UnitToggle unit={unit} onChange={setUnit} />
 
       <SearchBar city={city} setCity={setCity} onSearch={handleSearch} />
 
       {loading && <WeatherSkeleton />}
       {error && !loading && <ErrorMessage message={error} />}
-      {weather && !loading && <WeatherCard data={weather} />}
-    </main>
+      {weather && !loading && (
+        <>
+          <WeatherCard data={weather} unit={unit} />
+          <Forecast data={forecast} unit={unit} />
+        </>
+      )}    </main>
   )
 }
-
 

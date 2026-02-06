@@ -17,13 +17,13 @@ type CitySuggestion = {
 type Props = {
   city: string
   setCity: (value: string) => void
-  onSearch: () => void
+  onSearch: (value?: string) => void
 }
 
 export default function SearchBar({ city, setCity, onSearch }: Props) {
   const [suggestions, setSuggestions] = useState<CitySuggestion[]>([])
-  const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
+  const [isUserTyping, setIsUserTyping] = useState(false)
 
   useEffect(() => {
     if (!city.trim()) {
@@ -33,7 +33,6 @@ export default function SearchBar({ city, setCity, onSearch }: Props) {
 
     const timeout = setTimeout(async () => {
       try {
-        setLoading(true)
         const res = await axios.get(
           "https://api.openweathermap.org/geo/1.0/direct",
           {
@@ -48,26 +47,48 @@ export default function SearchBar({ city, setCity, onSearch }: Props) {
         setOpen(true)
       } catch {
         setSuggestions([])
-      } finally {
-        setLoading(false)
       }
     }, 400)
 
     return () => clearTimeout(timeout)
   }, [city])
 
+  const handleSuggestionSelect = (c: CitySuggestion) => {
+    const selectedCity = `${c.name}, ${c.country}`
+
+    setCity(selectedCity)
+
+    setIsUserTyping(false)
+    setOpen(false)
+    setSuggestions([])
+
+    onSearch(selectedCity)
+  }
+
   return (
     <div className="relative w-full max-w-md">
-
+      {/* Input */}
       <div className="relative flex items-center">
-        <MapPin className="absolute z-10 left-4 h-4 w-4 text-slate-800" />
+        <MapPin className="absolute left-4 h-4 w-4 text-slate-400 z-10" />
 
         <Input
           value={city}
           placeholder="Search city…"
-          onChange={(e) => setCity(e.target.value)}
-          onFocus={() => city && setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onChange={(e) => {
+            setIsUserTyping(true)
+            setCity(e.target.value)
+          }}
+          onFocus={() => {
+            if (isUserTyping && suggestions.length > 0) {
+              setOpen(true)
+            }
+          }}
+          onBlur={() => {
+            setTimeout(() => {
+              setOpen(false)
+              setIsUserTyping(false)
+            }, 150)
+          }}
           className="
             pl-10 pr-28 py-6 rounded-full
             bg-white/70 backdrop-blur
@@ -79,25 +100,30 @@ export default function SearchBar({ city, setCity, onSearch }: Props) {
         />
 
         <Button
-          onClick={onSearch}
+          onClick={() => {
+            setIsUserTyping(false)
+            setOpen(false)
+            setSuggestions([])
+            onSearch()
+          }}
           className="absolute right-1 rounded-full px-5"
         >
           Search
         </Button>
       </div>
 
-      {/* location suggestion based on the user input */}
-      {open && suggestions.length > 0 && (
-        <div className="absolute z-20 mt-2 w-full rounded-xl border bg-white shadow-lg overflow-hidden">
+      {/* Suggestions Dropdown */}
+      {open && isUserTyping && suggestions.length > 0 && (
+        <div className="absolute z-30 mt-2 w-full rounded-xl border bg-white shadow-lg overflow-hidden">
           {suggestions.map((c, idx) => (
             <button
               key={`${c.lat}-${c.lon}-${idx}`}
-              onClick={() => {
-                setCity(`${c.name}, ${c.country}`)
-                setOpen(false)
-                onSearch()
+              onMouseDown={(e) => {
+                e.preventDefault()
+                handleSuggestionSelect(c)
               }}
-              className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 transition"
+              onClick={() => handleSuggestionSelect(c)}
+              className="w-full px-4 py-2 z-50 text-left text-sm hover:bg-slate-100 transition"
             >
               <span className="font-medium">{c.name}</span>
               <span className="text-muted-foreground">
@@ -106,12 +132,6 @@ export default function SearchBar({ city, setCity, onSearch }: Props) {
             </button>
           ))}
         </div>
-      )}
-
-      {loading && (
-        <p className="mt-2 text-xs text-muted-foreground text-center">
-          Searching cities…
-        </p>
       )}
     </div>
   )

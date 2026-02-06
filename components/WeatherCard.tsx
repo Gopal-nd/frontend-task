@@ -1,12 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { WeatherResponse } from "@/types/weather"
 import InfoTooltip from "@/components/InfoTooltip"
+import { convertTemp } from "@/lib/convertTemp"
 
 type Props = {
   data: WeatherResponse
+  unit: "metric" | "imperial"
 }
 
-export default function WeatherCard({ data }: Props) {
+export default function WeatherCard({ data, unit }: Props) {
   return (
     <Card className="w-full max-w-md mt-6 text-center">
       <CardHeader>
@@ -19,7 +21,8 @@ export default function WeatherCard({ data }: Props) {
       <CardContent>
         <div className="flex items-center justify-center gap-1">
           <p className="text-5xl font-bold">
-            {Math.round(data.main.temp)}°C
+            {convertTemp(data.main.temp, unit)}°
+            {unit === "metric" ? "C" : "F"}
           </p>
           <InfoTooltip text="Current temperature measured in Celsius" />
         </div>
